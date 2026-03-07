@@ -21,17 +21,30 @@ pipeline {
             }
         }
 
+        // stage('Build Docker Image') {
+        //     steps {
+        //         dir("${WORK_DIR}") {
+        //             sh '''
+        //                 // docker rmi -f ${IMAGE_NAME}:${IMAGE_TAG} || true
+        //                 // docker build -t ${IMAGE_NAME}:${IMAGE_TAG} -f ${WORK_DIR}/Dockerfile ${WORK_DIR}
+        //                    docker build -t ${DOCKERHUB_USER}/${IMAGE_NAME}:${IMAGE_TAG} .
+        //             '''
+        //         }
+        //     }
+        // }
         stage('Build Docker Image') {
-            steps {
-                dir("${WORK_DIR}") {
-                    sh '''
-                        // docker rmi -f ${IMAGE_NAME}:${IMAGE_TAG} || true
-                        // docker build -t ${IMAGE_NAME}:${IMAGE_TAG} -f ${WORK_DIR}/Dockerfile ${WORK_DIR}
-                           docker build -t ${DOCKERHUB_USER}/${IMAGE_NAME}:${IMAGE_TAG} .
-                    '''
-                }
-            }
+    steps {
+        dir("${WORK_DIR}") {
+            sh '''
+                # Remove old image if exists
+                docker rmi -f ${DOCKERHUB_USER}/${IMAGE_NAME}:${IMAGE_TAG} || true
+
+                # Build new image
+                docker build -t ${DOCKERHUB_USER}/${IMAGE_NAME}:${IMAGE_TAG} .
+            '''
         }
+    }
+}
 
 
          stage('DockerHub Login') {
