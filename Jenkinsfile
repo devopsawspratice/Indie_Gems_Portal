@@ -8,7 +8,7 @@ pipeline {
         CONTAINER_NAME = "indie-gems-container"
         PORT = "9676"   // External port for app
         DOCKERHUB_USER  = "9397054542"
-        DOCKER_CREDS    = "DockerhubCred"
+        DOCKER_CREDS    = "dockerCred"
         CONTAINER_PORT  = "80"
     }
 
