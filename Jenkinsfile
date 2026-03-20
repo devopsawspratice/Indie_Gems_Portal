@@ -74,14 +74,23 @@ pipeline {
             }
         }
 
+        // stage('Configure EKS Access') {
+        //     steps {
+        //         sh '''
+        //         aws eks --region $AWS_REGION update-kubeconfig --name $EKS_CLUSTER
+        //         kubectl config current-context
+        //         '''
+        //     }
+        // }
+
         stage('Configure EKS Access') {
-            steps {
-                sh '''
-                aws eks --region $AWS_REGION update-kubeconfig --name $EKS_CLUSTER
-                kubectl config current-context
-                '''
-            }
-        }
+    steps {
+        sh '''
+        aws eks --region $AWS_REGION update-kubeconfig --name $EKS_CLUSTER
+        /usr/local/bin/kubectl config current-context
+        '''
+    }
+}
 
         stage('Deploy to Kubernetes') {
             steps {
