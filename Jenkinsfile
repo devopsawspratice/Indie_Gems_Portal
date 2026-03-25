@@ -11,7 +11,7 @@ pipeline {
         DOCKER_CREDS = "docker"
         CONTAINER_PORT = "80"
         AWS_REGION = "ap-south-1"
-        EKS_CLUSTER = "myclusterr"
+        EKS_CLUSTER = "saran"
         KUBECONFIG = "/var/lib/jenkins/.kube/config"
     }
 
