@@ -19,7 +19,7 @@ pipeline {
         stage('Checkout Code') {
             steps {
                 dir("${WORK_DIR}") {
-                    git branch: 'main', url: 'https://github.com/satyanarayana-24/Indie_Gems_Portal.git'
+                    git branch: 'main', url: 'https://github.com/devopsawspratice/Indie_Gems_Portal.git'
                 }
             }
         }
