@@ -13,9 +13,11 @@ pipeline {
         AWS_REGION = "us-east-1"
         EKS_CLUSTER = "saran"
         KUBECONFIG = "/var/lib/jenkins/.kube/config"
+        NOTIFY_EMAIL = "satyanarayana.gidituri666@gmail.com"
     }
 
     stages {
+
         stage('Checkout Code') {
             steps {
                 dir("${WORK_DIR}") {
@@ -42,80 +44,44 @@ pipeline {
                     usernameVariable: 'DOCKER_USER',
                     passwordVariable: 'DOCKER_PASS'
                 )]) {
-                    sh """
-                        echo \$DOCKER_PASS | docker login -u \$DOCKER_USER --password-stdin
-                    """
+                    sh '''
+                        echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin
+                    '''
                 }
             }
         }
 
         stage('Push Image to DockerHub') {
             steps {
-                sh "docker push ${DOCKERHUB_USER}/${IMAGE_NAME}:${IMAGE_TAG}"
-            }
-        }
-
-        // stage('Run Docker Container') {
-        //     steps {
-        //         sh '''
-        //             docker rm -f ${CONTAINER_NAME} || true
-        //             docker run -d -p ${PORT}:${CONTAINER_PORT} \
-        //             --name ${CONTAINER_NAME} \
-        //             ${DOCKERHUB_USER}/${IMAGE_NAME}:${IMAGE_TAG}
-        //         '''
-        //     }
-        // }
-
-            stage('Update K8s Image') {
-            steps {
                 sh '''
-                sed -i "s|image:.*|image: $DOCKERHUB_USER/$IMAGE_NAME:$IMAGE_TAG|" k8s/deployment.yml
+                    docker push ${DOCKERHUB_USER}/${IMAGE_NAME}:${IMAGE_TAG}
                 '''
             }
         }
 
-        // stage('Configure EKS Access') {
-        //     steps {
-        //         sh '''
-        //         aws eks --region $AWS_REGION update-kubeconfig --name $EKS_CLUSTER
-        //         kubectl config current-context
-        //         '''
-        //     }
-        // }
-
-//       stage('Configure EKS Access') {
-//     steps {
-//         sh '''
-//         export PATH=$PATH:/usr/bin
-//         aws eks --region $AWS_REGION update-kubeconfig --name $EKS_CLUSTER
-//         kubectl config current-context
-//         '''
-//     }
-// }
-//         stage('Configure EKS Access') {
-//     steps {
-//         sh '''
-//         aws eks --region $AWS_REGION update-kubeconfig --name $EKS_CLUSTER
-//         /root/bin/kubectl config current-context
-//         '''
-//     }
-// }
+        stage('Update K8s Image') {
+            steps {
+                sh '''
+                    sed -i "s|image:.*|image: $DOCKERHUB_USER/$IMAGE_NAME:$IMAGE_TAG|" k8s/deployment.yml
+                '''
+            }
+        }
 
         stage('Configure EKS Access') {
-    steps {
-        sh '''
-        export PATH=$PATH:/usr/local/bin
-        aws eks --region $AWS_REGION update-kubeconfig --name $EKS_CLUSTER
-        /usr/local/bin/kubectl config current-context
-        '''
-    }
-}
+            steps {
+                sh '''
+                    export PATH=$PATH:/usr/local/bin
+                    aws eks --region $AWS_REGION update-kubeconfig --name $EKS_CLUSTER
+                    kubectl config current-context
+                '''
+            }
+        }
 
         stage('Deploy to Kubernetes') {
             steps {
                 sh '''
-                kubectl apply -f k8s/deployment.yml
-                kubectl apply -f k8s/service.yml
+                    kubectl apply -f k8s/deployment.yml
+                    kubectl apply -f k8s/service.yml
                 '''
             }
         }
@@ -123,390 +89,34 @@ pipeline {
         stage('Verify Deployment') {
             steps {
                 sh '''
-                kubectl rollout status deployment python-devops-app || true
-                kubectl get pods -o wide
-                kubectl get svc
+                    kubectl rollout status deployment python-devops-app || true
+                    kubectl get pods -o wide
+                    kubectl get svc
                 '''
             }
         }
     }
+
+    post {
+        success {
+            sendMail("SUCCESS")
+        }
+        failure {
+            sendMail("FAILURE")
+        }
+    }
 }
 
-
-// working for automate without k8s
-// pipeline {
-//     agent any
-
-//     environment {
-//         WORK_DIR = "/var/lib/jenkins/workspace/Game"
-//         IMAGE_NAME = "indie-gems"
-//         IMAGE_TAG = "${BUILD_NUMBER}"
-//         CONTAINER_NAME = "indie-gems-container"
-//         PORT = "9676"
-//         DOCKERHUB_USER = "9397054542"
-//         DOCKER_CREDS = "dockerCred"
-//         CONTAINER_PORT = "80"
-//     }
-
-//     stages {
-//         stage('Checkout Code') {
-//             steps {
-//                 dir("${WORK_DIR}") {
-//                     git branch: 'main', url: 'https://github.com/satyanarayana-24/Indie_Gems_Portal.git'
-//                 }
-//             }
-//         }
-
-//         stage('Build Docker Image') {
-//             steps {
-//                 dir("${WORK_DIR}") {
-//                     sh '''
-//                         docker rmi -f ${DOCKERHUB_USER}/${IMAGE_NAME}:${IMAGE_TAG} || true
-//                         docker build -t ${DOCKERHUB_USER}/${IMAGE_NAME}:${IMAGE_TAG} .
-//                     '''
-//                 }
-//             }
-//         }
-
-//         stage('DockerHub Login') {
-//             steps {
-//                 withCredentials([usernamePassword(
-//                     credentialsId: "${DOCKER_CREDS}",
-//                     usernameVariable: 'DOCKER_USER',
-//                     passwordVariable: 'DOCKER_PASS'
-//                 )]) {
-//                     sh """
-//                         echo \$DOCKER_PASS | docker login -u \$DOCKER_USER --password-stdin
-//                     """
-//                 }
-//             }
-//         }
-
-//         stage('Push Image to DockerHub') {
-//             steps {
-//                 sh "docker push ${DOCKERHUB_USER}/${IMAGE_NAME}:${IMAGE_TAG}"
-//             }
-//         }
-
-//         stage('Run Docker Container') {
-//             steps {
-//                 sh '''
-//                     docker rm -f ${CONTAINER_NAME} || true
-//                     docker run -d -p ${PORT}:${CONTAINER_PORT} \
-//                     --name ${CONTAINER_NAME} \
-//                     ${DOCKERHUB_USER}/${IMAGE_NAME}:${IMAGE_TAG}
-//                 '''
-//             }
-//         }
-//     }
-// }
-// commented for gpt code
-// pipeline {
-//     agent any
-
-//     environment {
-//         WORK_DIR = "/var/lib/jenkins/workspace/Game"
-//         IMAGE_NAME = "indie-gems"
-//         IMAGE_TAG       = "${BUILD_NUMBER}"
-//         CONTAINER_NAME = "indie-gems-container"
-//         PORT = "9676"   // External port for app
-//         DOCKERHUB_USER  = "9397054542"
-//         DOCKER_CREDS    = "dockerCred"
-//         CONTAINER_PORT  = "80"
-//     }
-
-//     stages {
-//         stage('Checkout Code') {
-//             steps {
-//                 dir("${WORK_DIR}") {
-//                     git branch: 'main', url: 'https://github.com/satyanarayana-24/Indie_Gems_Portal.git'
-//                 }
-//             }
-//         }
-//         stage('Build Docker Image') {
-//     steps {
-//         dir("${WORK_DIR}") {
-//             sh '''
-//                 # Remove old image if exists
-//                 docker rmi -f ${DOCKERHUB_USER}/${IMAGE_NAME}:${IMAGE_TAG} || true
-
-//                 # Build new image
-//                 docker build -t ${DOCKERHUB_USER}/${IMAGE_NAME}:${IMAGE_TAG} .
-//             '''
-//         }
-//     }
-// }
-
-
-//          stage('DockerHub Login') {
-//             steps {
-//                 withCredentials([usernamePassword(
-//                     credentialsId: "${DOCKER_CREDS}",
-//                     usernameVariable: 'DOCKER_USER',
-//                     passwordVariable: 'DOCKER_PASS'
-//                 )]) {
-
-//                     sh """
-//                     echo \$DOCKER_PASS | docker login -u \$DOCKER_USER --password-stdin
-//                     """
-//                 }
-//             }
-//         }
-
-//          stage('Push Image to DockerHub') {
-//             steps {
-//                 sh """
-//                 docker push ${DOCKERHUB_USER}/${IMAGE_NAME}:${IMAGE_TAG}
-//                 """
-//             }
-//         }
-
-
-//         stage('Run Docker Container') {
-//     steps {
-//         dir("${WORK_DIR}") {
-//             sh '''
-//                 docker rm -f ${CONTAINER_NAME} || true
-
-//                 docker run -d \
-//                 -p ${PORT}:${CONTAINER_PORT} \
-//                 --name ${CONTAINER_NAME} \
-//                 ${DOCKERHUB_USER}/${IMAGE_NAME}:${IMAGE_TAG}
-//             '''
-//         }
-//     }
-
-
-//         // stage('Run Docker Container') {
-//         //     steps {
-//         //         dir("${WORK_DIR}") {
-//         //             sh '''
-//         //                 docker rm -f ${CONTAINER_NAME} || true
-//         //                 // docker run -d --name ${CONTAINER_NAME} -p ${PORT}:${CONTAINER_PORT} \ ${IMAGE_NAME}:${IMAGE_TAG}
-//         //                   docker run -d \
-//         //         -p ${HOST_PORT}:${CONTAINER_PORT} \
-//         //         --name ${CONTAINER_NAME} \
-//         //         ${DOCKERHUB_USER}/${IMAGE_NAME}:${IMAGE_TAG}
-//         //             '''
-//         //         }
-//         //     }
-    
-
-    
-//     }
-// }
-
-
-//original and docker one is below  ====================
-
-// pipeline {
-//     agent any
-
-//     environment {
-//         WORK_DIR = "/var/lib/jenkins/workspace/Game"
-//         IMAGE_NAME = "indie-gems"
-//         IMAGE_TAG       = "${BUILD_NUMBER}"
-//         CONTAINER_NAME = "indie-gems-container"
-//         PORT = "9676"   // External port for app
-//         DOCKERHUB_USER  = "9397054542"
-//         DOCKER_CREDS    = "dockerCred"
-//         CONTAINER_PORT  = "80"
-//     }
-
-//     stages {
-//         stage('Checkout Code') {
-//             steps {
-//                 dir("${WORK_DIR}") {
-//                     git branch: 'main', url: 'https://github.com/satyanarayana-24/Indie_Gems_Portal.git'
-//                 }
-//             }
-//         }
-// //         stage('Install Docker') {
-// //     steps {
-// //         sh '''
-// //         # Check if docker exists
-// //         if ! command -v docker &> /dev/null
-// //         then
-// //             echo "Docker not found. Installing Docker..."
-
-// //             sudo apt update
-// //             sudo apt install docker.io -y
-
-// //             sudo systemctl start docker
-// //             sudo systemctl enable docker
-
-// //             // sudo usermod -aG docker jenkins
-// //         else
-// //             echo "Docker already installed"
-// //         fi
-
-// //         docker --version
-// //         '''
-// //     }
-// // }
-//         // stage('Build Docker Image') {
-//         //     steps {
-//         //         dir("${WORK_DIR}") {
-//         //             sh '''
-//         //                 // docker rmi -f ${IMAGE_NAME}:${IMAGE_TAG} || true
-//         //                 // docker build -t ${IMAGE_NAME}:${IMAGE_TAG} -f ${WORK_DIR}/Dockerfile ${WORK_DIR}
-//         //                    docker build -t ${DOCKERHUB_USER}/${IMAGE_NAME}:${IMAGE_TAG} .
-//         //             '''
-//         //         }
-//         //     }
-//         // }
-//         stage('Build Docker Image') {
-//     steps {
-//         dir("${WORK_DIR}") {
-//             sh '''
-//                 # Remove old image if exists
-//                 docker rmi -f ${DOCKERHUB_USER}/${IMAGE_NAME}:${IMAGE_TAG} || true
-
-//                 # Build new image
-//                 docker build -t ${DOCKERHUB_USER}/${IMAGE_NAME}:${IMAGE_TAG} .
-//             '''
-//         }
-//     }
-// }
-
-
-//          stage('DockerHub Login') {
-//             steps {
-//                 withCredentials([usernamePassword(
-//                     credentialsId: "${DOCKER_CREDS}",
-//                     usernameVariable: 'DOCKER_USER',
-//                     passwordVariable: 'DOCKER_PASS'
-//                 )]) {
-
-//                     sh """
-//                     echo \$DOCKER_PASS | docker login -u \$DOCKER_USER --password-stdin
-//                     """
-//                 }
-//             }
-//         }
-
-//          stage('Push Image to DockerHub') {
-//             steps {
-//                 sh """
-//                 docker push ${DOCKERHUB_USER}/${IMAGE_NAME}:${IMAGE_TAG}
-//                 """
-//             }
-//         }
-
-
-//         stage('Run Docker Container') {
-//     steps {
-//         dir("${WORK_DIR}") {
-//             sh '''
-//                 docker rm -f ${CONTAINER_NAME} || true
-
-//                 docker run -d \
-//                 -p ${PORT}:${CONTAINER_PORT} \
-//                 --name ${CONTAINER_NAME} \
-//                 ${DOCKERHUB_USER}/${IMAGE_NAME}:${IMAGE_TAG}
-//             '''
-//         }
-//     }
-// }
-
-//         // stage('Run Docker Container') {
-//         //     steps {
-//         //         dir("${WORK_DIR}") {
-//         //             sh '''
-//         //                 docker rm -f ${CONTAINER_NAME} || true
-//         //                 // docker run -d --name ${CONTAINER_NAME} -p ${PORT}:${CONTAINER_PORT} \ ${IMAGE_NAME}:${IMAGE_TAG}
-//         //                   docker run -d \
-//         //         -p ${HOST_PORT}:${CONTAINER_PORT} \
-//         //         --name ${CONTAINER_NAME} \
-//         //         ${DOCKERHUB_USER}/${IMAGE_NAME}:${IMAGE_TAG}
-//         //             '''
-//         //         }
-//         //     }
-    
-
-//     // post {
-//     //     always {
-//     //         echo "Pipeline finished! Check http://13.204.85.107:3000"
-//     //     }
-
-//         // below kubernates
-//         stage('Update Kubernetes Deployment') {
-//     steps {
-//         sh """
-//         # Set the new image for the deployment
-//         kubectl set image deployment/java-deploy \
-//             indie-gems-container=${DOCKERHUB_USER}/${IMAGE_NAME}:${IMAGE_TAG} \
-//             --record
-
-//         # Wait for rollout to finish
-//         kubectl rollout status deployment/java-deploy
-//         """
-//     }
-// }
-
-//         ////  above kubernaties
-//     }
-// }
-
-
-
-
-
-
-
-
-
-//===================================================
-
-//
-// original one is below
-// pipeline {
-//     agent any
-
-//     environment {
-//         WORK_DIR = "/var/lib/jenkins/workspace/Game"
-//         IMAGE_NAME = "indie-gems"
-//         IMAGE_TAG  = "latest"
-//         CONTAINER_NAME = "indie-gems-container"
-//         PORT = "50008j"   // External port for app
-//     }
-
-//     stages {
-//         stage('Checkout Code') {
-//             steps {
-//                 dir("${WORK_DIR}") {
-//                     git branch: 'main', url: 'https://github.com/SukeshKaicharla/Indie_Gems_Portal.git'
-//                 }
-//             }
-//         }
-
-//         stage('Build Docker Image') {
-//             steps {
-//                 dir("${WORK_DIR}") {
-//                     sh '''
-//                         docker rmi -f ${IMAGE_NAME}:${IMAGE_TAG} || true
-//                         docker build -t ${IMAGE_NAME}:${IMAGE_TAG} -f ${WORK_DIR}/Dockerfile ${WORK_DIR}
-//                     '''
-//                 }
-//             }
-//         }
-
-//         stage('Run Docker Container') {
-//             steps {
-//                 dir("${WORK_DIR}") {
-//                     sh '''
-//                         docker rm -f ${CONTAINER_NAME} || true
-//                         docker run -d --name ${CONTAINER_NAME} -p ${PORT}:80 ${IMAGE_NAME}:${IMAGE_TAG}
-//                     '''
-//                 }
-//             }
-//         }
-//     }
-
-//     post {
-//         always {
-//             echo "Pipeline finished! Check http://13.204.85.107:3000"
-//         }
-//     }
-// }
-
+def sendMail(status) {
+    emailext(
+        subject: "${status}: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
+        body: """
+            <h2>Pipeline Status: ${status}</h2>
+            <p><b>Job:</b> ${env.JOB_NAME}</p>
+            <p><b>Build:</b> ${env.BUILD_NUMBER}</p>
+            <p><b>URL:</b> <a href="${env.BUILD_URL}">${env.BUILD_URL}</a></p>
+        """,
+        to: "${env.NOTIFY_EMAIL}",
+        mimeType: 'text/html'
+    )
+}
